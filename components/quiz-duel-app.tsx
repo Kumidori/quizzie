@@ -76,7 +76,6 @@ async function requestJson<T>(input: RequestInfo, init?: RequestInit): Promise<T
 export function QuizDuelApp() {
   const [state, setState] = useState(initialState)
   const [draftAnswers, setDraftAnswers] = useState<Record<string, string>>({})
-  const [questionIndex, setQuestionIndex] = useState(0)
   const [shareStatus, setShareStatus] = useState('')
   const [roomIdFromUrl, setRoomIdFromUrl] = useState('')
   const roundResetKeyRef = useRef('')
@@ -134,11 +133,19 @@ export function QuizDuelApp() {
   const inviteUrl = room ? new URL(room.invitePath, window.location.origin).toString() : ''
   const canUseShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function'
   const canUseClipboard = typeof navigator !== 'undefined' && typeof navigator.clipboard?.writeText === 'function'
-  const activeQuestion = currentRound?.questions[questionIndex]
   const alreadySubmitted = currentRound
     ? currentRound.questions.length > 0 && currentRound.questions.every((question) => Boolean(room?.myAnswers[question.id]))
     : false
   const myPlayer = room?.players.find((player) => player.id === viewerId)
+  const answerMap = { ...(room?.myAnswers ?? {}), ...draftAnswers }
+  const firstUnansweredIndex = currentRound ? currentRound.questions.findIndex((question) => !answerMap[question.id]) : -1
+  const questionIndex =
+    currentRound && currentRound.questions.length > 0
+      ? firstUnansweredIndex === -1
+        ? currentRound.questions.length - 1
+        : firstUnansweredIndex
+      : 0
+  const activeQuestion = currentRound?.questions[questionIndex]
 
   useEffect(() => {
     const roundQuestions = room?.currentRound?.questions ?? []
@@ -153,7 +160,6 @@ export function QuizDuelApp() {
       }
       roundResetKeyRef.current = resetKey
       setDraftAnswers(synced)
-      setQuestionIndex(0)
       return
     }
 
@@ -229,8 +235,8 @@ export function QuizDuelApp() {
     }
     const nextAnswers = { ...draftAnswers, [question.id]: choiceId }
     setDraftAnswers(nextAnswers)
-    if (questionIndex < currentRound.questions.length - 1) {
-      setQuestionIndex((current) => current + 1)
+    const answeredCount = currentRound.questions.filter((entry) => (room?.myAnswers[entry.id] ?? nextAnswers[entry.id])).length
+    if (answeredCount < currentRound.questions.length) {
       return
     }
     await withBusy(async () => {
