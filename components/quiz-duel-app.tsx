@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { ApiConfig, PublicQuestion, RoomSnapshot } from '../shared/types'
 
 type RoomResponse = {
@@ -79,6 +79,7 @@ export function QuizDuelApp() {
   const [questionIndex, setQuestionIndex] = useState(0)
   const [shareStatus, setShareStatus] = useState('')
   const [roomIdFromUrl, setRoomIdFromUrl] = useState('')
+  const roundResetKeyRef = useRef('')
 
   useEffect(() => {
     setRoomIdFromUrl(new URL(window.location.href).searchParams.get('room')?.trim() ?? '')
@@ -124,18 +125,6 @@ export function QuizDuelApp() {
     return () => window.clearInterval(poll)
   }, [state.room?.roomId, state.playerId])
 
-  useEffect(() => {
-    const roundQuestions = state.room?.currentRound?.questions ?? []
-    const synced: Record<string, string> = {}
-    for (const question of roundQuestions) {
-      if (state.room?.myAnswers[question.id]) {
-        synced[question.id] = state.room.myAnswers[question.id]
-      }
-    }
-    setDraftAnswers(synced)
-    setQuestionIndex(0)
-  }, [state.room?.currentRound?.index, state.room?.phase, state.room?.myAnswers])
-
   const room = state.room
   const viewerId = state.playerId
   const currentRound = room?.currentRound
@@ -150,6 +139,34 @@ export function QuizDuelApp() {
     ? currentRound.questions.length > 0 && currentRound.questions.every((question) => Boolean(room?.myAnswers[question.id]))
     : false
   const myPlayer = room?.players.find((player) => player.id === viewerId)
+
+  useEffect(() => {
+    const roundQuestions = room?.currentRound?.questions ?? []
+    const resetKey = `${room?.phase ?? 'none'}:${room?.currentRound?.index ?? 0}`
+
+    if (roundResetKeyRef.current !== resetKey) {
+      const synced: Record<string, string> = {}
+      for (const question of roundQuestions) {
+        if (room?.myAnswers[question.id]) {
+          synced[question.id] = room.myAnswers[question.id]
+        }
+      }
+      roundResetKeyRef.current = resetKey
+      setDraftAnswers(synced)
+      setQuestionIndex(0)
+      return
+    }
+
+    if (alreadySubmitted) {
+      const synced: Record<string, string> = {}
+      for (const question of roundQuestions) {
+        if (room?.myAnswers[question.id]) {
+          synced[question.id] = room.myAnswers[question.id]
+        }
+      }
+      setDraftAnswers(synced)
+    }
+  }, [room, alreadySubmitted])
 
   async function withBusy(action: () => Promise<void>) {
     setState((current) => ({ ...current, busy: true, error: null }))
