@@ -1,0 +1,23 @@
+{
+  "name": "Round Robin Quiz Duel",
+  "short_name": "Quiz Duel",
+  "description": "Multiplayer PWA quiz battles with invite links, rotating category picks, and push alerts.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#071120",
+  "theme_color": "#0f172a",
+  "icons": [
+    {
+      "src": "/icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
